@@ -2,6 +2,7 @@ const express = require('express');
 require('dotenv').config();
 
 const productsRouter = require('./routes/products');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,6 +23,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/productos', productsRouter);
+app.use('/api/admin', adminRouter);
 
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
