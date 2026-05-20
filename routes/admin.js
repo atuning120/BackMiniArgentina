@@ -6,6 +6,7 @@ const {
   updateAdminHogarElectronico,
   deleteAdminHogarElectronico,
   createAdminOrderHandler,
+  resolveAdminOrderPayload,
   listAdminOrdersHandler,
 } = require('../controllers/adminController');
 const { adminAuth } = require('../middleware/adminAuth');
@@ -19,6 +20,7 @@ router.patch('/productos/hogar/electronico/:sku', adminAuth, updateAdminHogarEle
 router.delete('/productos/hogar/electronico/:sku', adminAuth, deleteAdminHogarElectronico);
 
 router.post('/ordenes', adminAuth, createAdminOrderHandler);
+router.post('/ordenes/resolve', adminAuth, resolveAdminOrderPayload);
 router.get('/ordenes', adminAuth, listAdminOrdersHandler);
 
 module.exports = router;

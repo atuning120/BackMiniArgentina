@@ -73,6 +73,22 @@ function normalizeProductPayload(
   return result;
 }
 
+function decodeOrderPayload(base64Payload) {
+  const decoded = Buffer.from(base64Payload, 'base64').toString('utf-8');
+  return JSON.parse(decoded);
+}
+
+function extractOrderItems(payload) {
+  if (Array.isArray(payload)) {
+    return { items: payload, telefono: '' };
+  }
+
+  const telefono =
+    payload?.telefono || payload?.phone || payload?.cliente?.telefono || '';
+  const items = payload?.items || payload?.productos || payload?.cart || [];
+  return { items, telefono };
+}
+
 async function loginAdmin(req, res) {
   const { user, password } = getAdminCredentials();
   if (!user || !password) {
@@ -170,7 +186,7 @@ async function deleteAdminHogarElectronico(req, res) {
 }
 
 async function createAdminOrderHandler(req, res) {
-  const { items = [], notes = '' } = req.body || {};
+  const { items = [], notes = '', customer = {}, tax = {} } = req.body || {};
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Items are required' });
   }
@@ -193,10 +209,23 @@ async function createAdminOrderHandler(req, res) {
     0
   );
 
+  const normalizedCustomer = {
+    nombre: customer?.nombre || '',
+    telefono: customer?.telefono || '',
+  };
+
+  const taxRate = Number(tax?.rate);
+  const normalizedTax = {
+    enabled: Boolean(tax?.enabled),
+    rate: Number.isFinite(taxRate) ? taxRate : 0,
+  };
+
   const order = {
     items: normalizedItems,
     total,
     notes,
+    customer: normalizedCustomer,
+    tax: normalizedTax,
     status: 'pendiente',
     createdAt: new Date().toISOString(),
   };
@@ -207,6 +236,61 @@ async function createAdminOrderHandler(req, res) {
   } catch (error) {
     console.error('Error creating order:', error);
     return res.status(500).json({ error: 'Error creating order' });
+  }
+}
+
+async function resolveAdminOrderPayload(req, res) {
+  const { payload } = req.body || {};
+  if (!payload) {
+    return res.status(400).json({ error: 'Missing payload' });
+  }
+
+  let parsed;
+  try {
+    parsed = decodeOrderPayload(payload);
+  } catch (error) {
+    return res.status(400).json({ error: 'Invalid payload' });
+  }
+
+  const { items, telefono } = extractOrderItems(parsed);
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'No items found in payload' });
+  }
+
+  try {
+    const products = await getHogarElectronicoProducts();
+    const bySku = new Map(products.map((product) => [String(product.sku), product]));
+    const byCatalog = new Map(
+      products.map((product) => [String(product.id_catalogo), product])
+    );
+
+    const resolved = [];
+    const notFound = [];
+
+    items.forEach((item) => {
+      const id = item?.idproducto ?? item?.sku ?? item?.id;
+      const quantity = Number(item?.cantidad ?? item?.quantity ?? 0);
+      if (!id || !Number.isFinite(quantity) || quantity <= 0) return;
+
+      const product = bySku.get(String(id)) || byCatalog.get(String(id));
+      if (!product) {
+        notFound.push(id);
+        return;
+      }
+
+      resolved.push({
+        sku: product.sku,
+        nombre: product.nombre || '',
+        cantidad: quantity,
+        precio: Number(product.precio) || 0,
+        moneda: product.moneda || 'ARS',
+      });
+    });
+
+    return res.json({ items: resolved, notFound, telefono });
+  } catch (error) {
+    console.error('Error resolving order payload:', error);
+    return res.status(500).json({ error: 'Error resolving payload' });
   }
 }
 
@@ -227,5 +311,6 @@ module.exports = {
   updateAdminHogarElectronico,
   deleteAdminHogarElectronico,
   createAdminOrderHandler,
+  resolveAdminOrderPayload,
   listAdminOrdersHandler,
 };
