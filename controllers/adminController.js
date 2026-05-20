@@ -204,10 +204,13 @@ async function createAdminOrderHandler(req, res) {
     return res.status(400).json({ error: 'Items are invalid' });
   }
 
-  const total = normalizedItems.reduce(
+  const computedTotal = normalizedItems.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
   );
+  const rawTotal = Number(req.body?.total);
+  const total =
+    Number.isFinite(rawTotal) && rawTotal >= 0 ? rawTotal : computedTotal;
 
   const normalizedCustomer = {
     nombre: customer?.nombre || '',
