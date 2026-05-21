@@ -51,6 +51,10 @@ function normalizeProductPayload(
     result.en_oferta = Boolean(payload.en_oferta);
   }
 
+  if (!partial || hasKey('tamano_imagen')) {
+    result.tamano_imagen = payload.tamano_imagen || 'default';
+  }
+
   if (!partial || hasKey('destacado')) {
     result.destacado = Boolean(payload.destacado);
   }

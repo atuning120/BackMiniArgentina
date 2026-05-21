@@ -25,7 +25,7 @@ async function updateHogarElectronicoProductBySku(sku, updates) {
       { $set: updates },
       { returnDocument: 'after' }
     );
-  return result.value;
+  return result;
 }
 
 async function deleteHogarElectronicoProductBySku(sku) {
