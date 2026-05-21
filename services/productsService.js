@@ -1,4 +1,5 @@
 const { getDb } = require('../db/mongo');
+const { ObjectId } = require('mongodb');
 const {
   DB_NAME,
   ELECTRONICO_COLLECTION,
@@ -49,6 +50,21 @@ async function listAdminOrders() {
     .toArray();
 }
 
+async function updateAdminOrder(orderId, updates) {
+  const db = await getDb(DB_NAME);
+  try {
+    const result = await db.collection(ORDERS_COLLECTION).findOneAndUpdate(
+      { _id: new ObjectId(orderId) },
+      { $set: updates },
+      { returnDocument: 'after' }
+    );
+    return result;
+  } catch (error) {
+    console.error('Error updating order:', error);
+    return null;
+  }
+}
+
 module.exports = {
   getHogarElectronicoProducts,
   createHogarElectronicoProduct,
@@ -56,4 +72,5 @@ module.exports = {
   deleteHogarElectronicoProductBySku,
   createAdminOrder,
   listAdminOrders,
+  updateAdminOrder,
 };

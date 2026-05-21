@@ -5,6 +5,7 @@ const {
   deleteHogarElectronicoProductBySku,
   createAdminOrder,
   listAdminOrders,
+  updateAdminOrder,
 } = require('../services/productsService');
 const { createToken, getAdminCredentials } = require('../middleware/adminAuth');
 
@@ -306,8 +307,28 @@ async function listAdminOrdersHandler(req, res) {
     const orders = await listAdminOrders();
     return res.json(orders);
   } catch (error) {
-    console.error('Error fetching orders:', error);
-    return res.status(500).json({ error: 'Error fetching orders' });
+    console.error('Error in listAdminOrdersHandler:', error);
+    return res.status(500).json({ error: 'Failed to list orders' });
+  }
+}
+
+async function updateAdminOrderHandler(req, res) {
+  const { id } = req.params;
+  const { status } = req.body;
+  
+  if (!id || !status) {
+    return res.status(400).json({ error: 'Missing parameters' });
+  }
+  
+  try {
+    const updated = await updateAdminOrder(id, { status, updatedAt: new Date().toISOString() });
+    if (!updated) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    return res.json(updated);
+  } catch (error) {
+    console.error('Error in updateAdminOrderHandler:', error);
+    return res.status(500).json({ error: 'Failed to update order' });
   }
 }
 
@@ -320,4 +341,5 @@ module.exports = {
   createAdminOrderHandler,
   resolveAdminOrderPayload,
   listAdminOrdersHandler,
+  updateAdminOrderHandler,
 };
