@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --forceExit",
+    "test:coverage": "jest --coverage --forceExit",
     "start": "node index.js",
     "dev": "nodemon index.js",
     "seed:hogar-electronico": "node scripts/seedHogarElectronico.js"
@@ -22,11 +23,17 @@
   },
   "homepage": "https://github.com/atuning120/BackMiniArgentina#readme",
   "dependencies": {
+    "cors": "^2.8.6",
     "dotenv": "^16.4.5",
     "express": "^5.2.1",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
     "mongodb": "^7.2.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
   }
 }
