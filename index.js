@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const productsRouter = require('./routes/products');
 const adminRouter = require('./routes/admin');
+const { connectRedis } = require('./db/redis');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -37,9 +38,19 @@ app.use('/api/productos', productsRouter);
 app.use('/api/admin', adminRouter);
 
 if (require.main === module) {
-  app.listen(port, () => {
-    console.log(`Servidor escuchando en http://localhost:${port}`);
-  });
+  connectRedis()
+    .then(() => {
+      app.listen(port, () => {
+        console.log(`Servidor escuchando en http://localhost:${port}`);
+      });
+    })
+    .catch((err) => {
+      console.error('Error al conectar con Redis:', err.message);
+      // Iniciar el servidor de todos modos por si la base de datos Mongo aún funciona
+      app.listen(port, () => {
+        console.log(`Servidor escuchando en http://localhost:${port} (sin Redis)`);
+      });
+    });
 }
 
 module.exports = app;
