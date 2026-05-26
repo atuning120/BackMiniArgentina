@@ -77,11 +77,13 @@ async function updateHogarElectronicoProductBySku(sku, updates) {
 
 async function deleteHogarElectronicoProductBySku(sku) {
   const db = await getDb(DB_NAME);
-  const result = await db.collection(ELECTRONICO_COLLECTION).deleteOne({ sku });
-  if (result.deletedCount > 0) {
+  const result = await db.collection(ELECTRONICO_COLLECTION).findOneAndDelete({ sku });
+  console.log('FINDONEANDDELETE RESULT:', result);
+  if (result) {
     await clearProductsCache();
+    return result.value !== undefined ? result.value : result;
   }
-  return result.deletedCount > 0;
+  return null;
 }
 
 async function createAdminOrder(order) {

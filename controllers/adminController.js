@@ -7,6 +7,8 @@ const {
   listAdminOrders,
   updateAdminOrder,
 } = require('../services/productsService');
+const fs = require('fs');
+const path = require('path');
 const { createToken, getAdminCredentials } = require('../middleware/adminAuth');
 
 const DEFAULT_CATEGORIES = ['iluminacion', 'ferreteria', 'limpieza'];
@@ -161,10 +163,24 @@ async function updateAdminHogarElectronico(req, res) {
   });
 
   try {
+    const products = await getHogarElectronicoProducts();
+    const existingProduct = products.find(p => p.sku === sku);
+
     const updated = await updateHogarElectronicoProductBySku(sku, cleaned);
     if (!updated) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
+
+    if (existingProduct && existingProduct.imagen !== updated.imagen) {
+      if (existingProduct.imagen && existingProduct.imagen.includes('/uploads/')) {
+        const filename = existingProduct.imagen.split('/uploads/')[1];
+        const filePath = path.join(__dirname, '../uploads', filename);
+        fs.unlink(filePath, (err) => {
+          if (err && err.code !== 'ENOENT') console.error('Error deleting old image:', err);
+        });
+      }
+    }
+
     return res.json(updated);
   } catch (error) {
     console.error('Error updating product:', error);
@@ -179,10 +195,19 @@ async function deleteAdminHogarElectronico(req, res) {
   }
 
   try {
-    const deleted = await deleteHogarElectronicoProductBySku(sku);
-    if (!deleted) {
+    const deletedProduct = await deleteHogarElectronicoProductBySku(sku);
+    if (!deletedProduct) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
+
+    if (deletedProduct.imagen && deletedProduct.imagen.includes('/uploads/')) {
+      const filename = deletedProduct.imagen.split('/uploads/')[1];
+      const filePath = path.join(__dirname, '../uploads', filename);
+      fs.unlink(filePath, (err) => {
+        if (err && err.code !== 'ENOENT') console.error('Error deleting image:', err);
+      });
+    }
+
     return res.status(204).send();
   } catch (error) {
     console.error('Error deleting product:', error);
