@@ -3,16 +3,20 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
+const path = require('path');
 require('dotenv').config();
 
 const productsRouter = require('./routes/products');
 const adminRouter = require('./routes/admin');
 const { connectRedis } = require('./db/redis');
+const { cleanupOrphanImages } = require('./cron/cleanup');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*', // Cambiar a la URL de tu frontend en producción
@@ -28,6 +32,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // app.use(mongoSanitize()); // Incompatible con Express 5.x por el getter de req.query
 
 app.get('/', (req, res) => {
@@ -42,6 +47,10 @@ if (require.main === module) {
     .then(() => {
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port}`);
+        
+        // Ejecutar Garbage Collector al inicio (con 5 segs de retraso) y luego cada 24hs
+        setTimeout(cleanupOrphanImages, 5000);
+        setInterval(cleanupOrphanImages, 24 * 60 * 60 * 1000);
       });
     })
     .catch((err) => {
@@ -49,6 +58,10 @@ if (require.main === module) {
       // Iniciar el servidor de todos modos por si la base de datos Mongo aún funciona
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port} (sin Redis)`);
+        
+        // Ejecutar Garbage Collector al inicio (con 5 segs de retraso) y luego cada 24hs
+        setTimeout(cleanupOrphanImages, 5000);
+        setInterval(cleanupOrphanImages, 24 * 60 * 60 * 1000);
       });
     });
 }
