@@ -96,23 +96,58 @@ function extractOrderItems(payload) {
   return { items, telefono };
 }
 
-async function loginAdmin(req, res) {
-  const { user, password } = getAdminCredentials();
-  if (!user || !password) {
-    return res.status(500).json({ error: 'Admin credentials not configured' });
-  }
+const { getSingleAdmin, verifyPassword, updateSingleAdmin } = require('../services/adminService');
 
+async function loginAdmin(req, res) {
   const { username, password: inputPassword } = req.body || {};
-  if (username !== user || inputPassword !== password) {
-    return res.status(401).json({ error: 'Credenciales invalidas' });
+  if (!username || !inputPassword) {
+    return res.status(400).json({ error: 'Faltan credenciales' });
   }
 
   try {
-    const { token, expiresAt } = createToken(username);
+    const adminUser = await getSingleAdmin();
+    if (!adminUser || adminUser.username !== username) {
+      return res.status(401).json({ error: 'Credenciales invalidas' });
+    }
+
+    const isValid = verifyPassword(inputPassword, adminUser.hash, adminUser.salt);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Credenciales invalidas' });
+    }
+
+    const { token, expiresAt } = await createToken(username);
     return res.json({ token, expiresAt });
   } catch (error) {
-    console.error('Error creating token:', error);
-    return res.status(500).json({ error: 'Token error' });
+    console.error('Error en login:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+async function updateAdminCredentialsHandler(req, res) {
+  const { masterPin, username, password } = req.body || {};
+  if (!masterPin || !username || !password) {
+    return res.status(400).json({ error: 'Faltan datos para actualizar' });
+  }
+
+  const expectedPin = process.env.MASTER_PIN || '000000';
+  if (masterPin !== expectedPin) {
+    return res.status(401).json({ error: 'PIN Maestro incorrecto' });
+  }
+
+  try {
+    const adminUser = await getSingleAdmin();
+    if (!adminUser) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    await updateSingleAdmin(username, password);
+    
+    // Generar un nuevo token para las nuevas credenciales
+    const { token, expiresAt } = await createToken(username);
+    return res.json({ success: true, message: 'Credenciales actualizadas', token, expiresAt });
+  } catch (error) {
+    console.error('Error al actualizar credenciales:', error);
+    return res.status(500).json({ error: 'Error al actualizar credenciales' });
   }
 }
 
@@ -359,6 +394,7 @@ async function updateAdminOrderHandler(req, res) {
 
 module.exports = {
   loginAdmin,
+  updateAdminCredentialsHandler,
   getAdminHogarElectronico,
   createAdminHogarElectronico,
   updateAdminHogarElectronico,

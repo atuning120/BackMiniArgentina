@@ -42,9 +42,12 @@ app.get('/', (req, res) => {
 app.use('/api/productos', productsRouter);
 app.use('/api/admin', adminRouter);
 
+const { initDefaultAdmin } = require('./services/adminService');
+
 if (require.main === module) {
   connectRedis()
-    .then(() => {
+    .then(async () => {
+      await initDefaultAdmin();
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port}`);
         
@@ -53,9 +56,10 @@ if (require.main === module) {
         setInterval(cleanupOrphanImages, 24 * 60 * 60 * 1000);
       });
     })
-    .catch((err) => {
+    .catch(async (err) => {
       console.error('Error al conectar con Redis:', err.message);
       // Iniciar el servidor de todos modos por si la base de datos Mongo aún funciona
+      await initDefaultAdmin().catch(e => console.error('Error init mongo admin:', e));
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port} (sin Redis)`);
         

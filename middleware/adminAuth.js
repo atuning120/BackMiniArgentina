@@ -1,11 +1,10 @@
 const crypto = require('crypto');
+const { getDb } = require('../db/mongo');
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 8;
 
 function getAdminCredentials() {
   return {
-    user: process.env.ADMIN_USER,
-    password: process.env.ADMIN_PASSWORD,
     secret: process.env.ADMIN_TOKEN_SECRET,
   };
 }
@@ -14,20 +13,24 @@ function signTokenPayload(payload, secret) {
   return crypto.createHmac('sha256', secret).update(payload).digest('hex');
 }
 
-function createToken(username) {
+async function createToken(username) {
   const { secret } = getAdminCredentials();
   if (!secret) {
     throw new Error('Missing ADMIN_TOKEN_SECRET in environment.');
   }
 
+  const db = await getDb(process.env.MONGODB_DB_NAME || 'ecommerce');
+  const admin = await db.collection('admin').findOne({});
+  const salt = admin ? admin.salt : '';
+
   const expiresAt = Date.now() + TOKEN_TTL_MS;
   const payload = `${username}:${expiresAt}`;
-  const signature = signTokenPayload(payload, secret);
+  const signature = signTokenPayload(payload, secret + salt);
   const token = Buffer.from(`${payload}:${signature}`).toString('base64url');
   return { token, expiresAt };
 }
 
-function verifyToken(token) {
+async function verifyToken(token) {
   const { secret } = getAdminCredentials();
   if (!secret) {
     throw new Error('Missing ADMIN_TOKEN_SECRET in environment.');
@@ -47,8 +50,13 @@ function verifyToken(token) {
   if (!username || !Number.isFinite(expiresAt)) return null;
   if (Date.now() > expiresAt) return null;
 
+  const db = await getDb(process.env.MONGODB_DB_NAME || 'ecommerce');
+  const admin = await db.collection('admin').findOne({});
+  if (!admin || admin.username !== username) return null;
+
+  const salt = admin.salt || '';
   const payload = `${username}:${expiresAt}`;
-  const expected = signTokenPayload(payload, secret);
+  const expected = signTokenPayload(payload, secret + salt);
   const expectedBuffer = Buffer.from(expected, 'utf-8');
   const signatureBuffer = Buffer.from(signature, 'utf-8');
 
@@ -58,7 +66,7 @@ function verifyToken(token) {
   return username;
 }
 
-function adminAuth(req, res, next) {
+async function adminAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
   if (!authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -66,7 +74,7 @@ function adminAuth(req, res, next) {
 
   const token = authHeader.replace('Bearer ', '').trim();
   try {
-    const username = verifyToken(token);
+    const username = await verifyToken(token);
     if (!username) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
