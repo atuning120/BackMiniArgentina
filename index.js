@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const productsRouter = require('./routes/products');
 const adminRouter = require('./routes/admin');
+const contactRouter = require('./routes/contact');
 const { connectRedis } = require('./db/redis');
 const { cleanupOrphanImages } = require('./cron/cleanup');
 
@@ -17,6 +18,9 @@ const port = process.env.PORT || 3000;
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
+// Trust the reverse proxy (Caddy/Nginx) to correctly get the client IP for rate limiting
+app.set('trust proxy', 1);
 
 const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(url => url.trim()) : ['*'];
 
@@ -32,15 +36,16 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 100, 
-  message: 'Demasiadas peticiones desde esta IP, intenta de nuevo más tarde.',
-});
-app.use(limiter);
-
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  message: 'Demasiadas peticiones desde esta IP, intenta de nuevo más tarde.',
+});
+app.use('/api', limiter);
+
 // app.use(mongoSanitize()); // Incompatible con Express 5.x por el getter de req.query
 
 app.get('/', (req, res) => {
@@ -49,6 +54,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/productos', productsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/contacto', contactRouter);
 
 const { initDefaultAdmin } = require('./services/adminService');
 
@@ -58,7 +64,7 @@ if (require.main === module) {
       await initDefaultAdmin();
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port}`);
-        
+
         // Ejecutar Garbage Collector al inicio (con 5 segs de retraso) y luego cada 24hs
         setTimeout(cleanupOrphanImages, 5000);
         setInterval(cleanupOrphanImages, 24 * 60 * 60 * 1000);
@@ -70,7 +76,7 @@ if (require.main === module) {
       await initDefaultAdmin().catch(e => console.error('Error init mongo admin:', e));
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port} (sin Redis)`);
-        
+
         // Ejecutar Garbage Collector al inicio (con 5 segs de retraso) y luego cada 24hs
         setTimeout(cleanupOrphanImages, 5000);
         setInterval(cleanupOrphanImages, 24 * 60 * 60 * 1000);
