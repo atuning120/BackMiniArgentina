@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   loginAdmin,
+  updateAdminCredentialsHandler,
   getAdminHogarElectronico,
   createAdminHogarElectronico,
   updateAdminHogarElectronico,
@@ -15,6 +16,8 @@ const { adminAuth } = require('../middleware/adminAuth');
 const router = express.Router();
 
 router.post('/login', loginAdmin);
+router.get('/verify', adminAuth, (req, res) => res.json({ valid: true, username: req.adminUser }));
+router.put('/credentials', adminAuth, updateAdminCredentialsHandler);
 router.get('/productos/hogar/electronico', adminAuth, getAdminHogarElectronico);
 router.post('/productos/hogar/electronico', adminAuth, createAdminHogarElectronico);
 router.patch('/productos/hogar/electronico/:sku', adminAuth, updateAdminHogarElectronico);
