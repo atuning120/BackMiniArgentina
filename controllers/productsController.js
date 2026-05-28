@@ -10,7 +10,7 @@ async function getHogarElectronico(req, res) {
     res.json(productos);
   } catch (error) {
     console.error('Error fetching products:', error);
-    res.status(500).json({ error: 'Error fetching products' });
+    res.status(500).json({ error: 'Error fetching products', details: error.message });
   }
 }
 

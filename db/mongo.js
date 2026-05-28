@@ -8,7 +8,11 @@ if (!MONGODB_URI) {
   throw new Error('Missing MONGODB_URI in environment.');
 }
 
-const client = new MongoClient(MONGODB_URI);
+const client = new MongoClient(MONGODB_URI, {
+  serverSelectionTimeoutMS: 60000,
+  connectTimeoutMS: 60000,
+  socketTimeoutMS: 60000,
+});
 let clientPromise;
 
 function getClient() {
