@@ -32,6 +32,10 @@ El backend provee todos los servicios necesarios para el funcionamiento de la ti
    - **Gestión de Accesos:** Provee flujos seguros para actualizar el usuario y la contraseña del administrador, protegidos por un sistema de validación mediante PIN.
    - **Seguridad Perimetral:** Incorpora *Rate Limiting* para evitar ataques de fuerza bruta, *CORS* estricto basado en variables de entorno, y políticas estrictas en los Headers de HTTP (*Helmet*).
 
+5. **Módulo de Correos y Notificaciones (`/api/contact/`)**
+   - **Procesamiento de Formularios:** Recibe y procesa las solicitudes del formulario de contacto integrado en el frontend.
+   - **Envío Automatizado:** Utiliza el servicio SMTP (vía Nodemailer) para despachar los mensajes al correo configurado del administrador, aplicando ajustes de zona horaria local (Argentina) en las plantillas enviadas.
+
 ---
 
 ## 💻 Tecnologías y Herramientas Usadas
@@ -39,8 +43,11 @@ El backend provee todos los servicios necesarios para el funcionamiento de la ti
 - **Node.js & Express (v5):** Entorno de ejecución y framework principal para el manejo de rutas y middlewares.
 - **Multer:** Middleware para la manipulación de peticiones `multipart/form-data` (recepción de las imágenes subidas).
 - **Sharp:** Biblioteca de alto rendimiento para el procesamiento, redimensionamiento y conversión de imágenes.
+- **Nodemailer:** Módulo para el envío de correos electrónicos desde el servidor (ej. notificaciones y formularios de contacto).
 - **Helmet & Express Rate Limit:** Herramientas de seguridad para proteger contra vulnerabilidades web comunes y limitar el tráfico abusivo.
+- **Express Mongo Sanitize:** Middleware de seguridad utilizado para prevenir ataques de inyección NoSQL.
 - **CORS:** Middleware para habilitar el intercambio de recursos de origen cruzado de manera segura.
+- **Dotenv:** Herramienta para la gestión y carga de variables de entorno de forma segura.
 - **Jest & Supertest:** Framework y librerías utilizadas para llevar a cabo los test automatizados y pruebas de integración sobre los endpoints de la API.
 - **Nodemon:** Herramienta de desarrollo que reinicia el servidor automáticamente tras detectar cambios.
 
