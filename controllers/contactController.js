@@ -82,7 +82,7 @@ exports.sendContactEmail = async (req, res) => {
                   <p class="intro">Se ha registrado una nueva consulta a través del formulario oficial de la tienda. A continuación se detallan los datos del cliente y su requerimiento.</p>
                   
                   <div class="details-box">
-                    <p class="details-row"><span class="details-label">Fecha:</span> ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p class="details-row"><span class="details-label">Fecha:</span> ${new Date().toLocaleString('es-AR', {timeZone: 'America/Argentina/Buenos_Aires', dateStyle: 'short', timeStyle: 'short'})}</p>
                     <p class="details-row"><span class="details-label">Cliente:</span> <strong>${name || 'No especificado'}</strong></p>
                     <p class="details-row" style="margin: 0;"><span class="details-label">Correo:</span> <a href="mailto:${email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${email}</a></p>
                   </div>
