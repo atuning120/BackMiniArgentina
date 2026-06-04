@@ -96,30 +96,46 @@ function extractOrderItems(payload) {
   return { items, telefono };
 }
 
+const mongoSanitize = require('express-mongo-sanitize');
 const { getSingleAdmin, verifyPassword, updateSingleAdmin } = require('../services/adminService');
 
 async function loginAdmin(req, res) {
+  // Sanitizamos el body para evitar NoSQL Injections (ej. {"$ne": ""})
+  if (req.body) {
+    if (mongoSanitize.has(req.body)) {
+      console.warn(`[SECURITY ALERT] Intento de NoSQL Injection (caracteres prohibidos) detectado desde IP: ${req.ip || 'desconocida'} - Fecha: ${new Date().toISOString()}`);
+    }
+    mongoSanitize.sanitize(req.body);
+  }
+
   const { username, password: inputPassword } = req.body || {};
+  
   if (!username || !inputPassword) {
     return res.status(400).json({ error: 'Faltan credenciales' });
+  }
+
+  // Segunda capa de seguridad: asegurar que sean strings primitivos
+  if (typeof username !== 'string' || typeof inputPassword !== 'string') {
+    console.warn(`[SECURITY ALERT] Intento de NoSQL Injection (tipos inválidos) detectado desde IP: ${req.ip || 'desconocida'} - Fecha: ${new Date().toISOString()}`);
+    return res.status(400).json({ error: 'Formato de credenciales inválido' });
   }
 
   try {
     const adminUser = await getSingleAdmin();
     if (!adminUser || adminUser.username !== username) {
-      return res.status(401).json({ error: 'Credenciales invalidas' });
+      return res.status(401).json({ error: 'Usuario no encontrado' });
     }
 
     const isValid = verifyPassword(inputPassword, adminUser.hash, adminUser.salt);
     if (!isValid) {
-      return res.status(401).json({ error: 'Credenciales invalidas' });
+      return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
 
     const { token, expiresAt } = await createToken(username);
     return res.json({ token, expiresAt });
   } catch (error) {
     console.error('Error en login:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+    return res.status(500).json({ error: 'Error interno del servidor al procesar el login' });
   }
 }
 

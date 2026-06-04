@@ -40,9 +40,12 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1000,
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 50, // límite de 50 peticiones
   message: 'Demasiadas peticiones desde esta IP, intenta de nuevo más tarde.',
+  keyGenerator: (req, res) => {
+    return req.ip; // Específicamente por IP
+  }
 });
 app.use('/api', limiter);
 
