@@ -12,10 +12,32 @@ const {
   updateAdminOrderHandler,
 } = require('../controllers/adminController');
 const { adminAuth } = require('../middleware/adminAuth');
+const { progressiveLoginLimiter } = require('../middleware/progressiveLoginLimiter');
+const svgCaptcha = require('svg-captcha');
+const { redisClient } = require('../db/redis');
 
 const router = express.Router();
 
-router.post('/login', loginAdmin);
+router.get('/captcha', async (req, res) => {
+  const ip = req.ip || 'desconocida';
+  const captcha = svgCaptcha.createMathExpr({
+    mathMin: 1,
+    mathMax: 9,
+    mathOperator: '+',
+    color: true,
+    noise: 2
+  });
+  
+  if (redisClient && redisClient.isOpen) {
+    // Guardar respuesta del captcha en Redis por 5 minutos
+    await redisClient.setEx(`captcha:${ip}`, 300, captcha.text);
+  }
+  
+  res.type('svg');
+  res.status(200).send(captcha.data);
+});
+
+router.post('/login', progressiveLoginLimiter, loginAdmin);
 router.get('/verify', adminAuth, (req, res) => res.json({ valid: true, username: req.adminUser }));
 router.put('/credentials', adminAuth, updateAdminCredentialsHandler);
 router.get('/productos/hogar/electronico', adminAuth, getAdminHogarElectronico);
