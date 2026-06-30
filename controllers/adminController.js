@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { createToken, getAdminCredentials } = require('../middleware/adminAuth');
 
-const DEFAULT_CATEGORIES = ['iluminacion', 'ferreteria', 'limpieza'];
+const DEFAULT_CATEGORIES = ['iluminacion', 'ferreteria', 'limpieza', 'electricidad'];
 
 const normalizeCategory = (value) => (value || '').trim().toLowerCase();
 
